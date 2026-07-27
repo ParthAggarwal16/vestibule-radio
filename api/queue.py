@@ -9,6 +9,8 @@ import json
 import os
 from pathlib import Path
 from .models import Track
+from .store import load_tracks
+import random
 
 RECENT_PLAYS_PATH = Path(os.getenv("RECENT_PLAYS_PATH", "data/recent_plays.json"))
 
@@ -71,3 +73,40 @@ def recent_artists(
         artists.add(track.artist)
 
     return artists
+
+
+def _weighted_choice(tracks: list[Track], weights: list[float]) -> Track:
+    """returns a weight random track"""
+    return random.choices(tracks, weights=weights, k=1)[0]
+
+
+def pick_next_track() -> Track | None:
+    """selects the next track for playing"""
+
+    tracks = load_tracks()
+    if not tracks:
+        return None
+
+    recent_plays = load_recent_plays()
+    buffer_size = compute_buffer_size(len(tracks))
+    recent_buffer = set(recent_plays[-buffer_size:]) if buffer_size else set()
+    candidates = [track for track in tracks if track.video_id not in recent_buffer]
+    # if every single track falls into the recent buffer (should only happen with malformed history imo, happy to be proven wrong), fall back to the full library rather than deadlocking
+
+    if not candidates:
+        candidates = tracks
+
+    recent_artist_set = recent_artists(tracks, recent_plays)
+
+    weights = [
+        ARTIST_PENALTY if track.artist and track.artist in recent_artist_set else 1.0
+        for track in candidates
+    ]
+    selected = _weighted_choice(candidates, weights)
+    recent_plays.append(selected.video_id)
+
+    if buffer_size:
+        recent_plays = recent_plays[-buffer_size:]
+
+    save_recent_plays(recent_plays)
+    return selected
