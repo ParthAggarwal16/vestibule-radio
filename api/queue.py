@@ -60,7 +60,7 @@ def compute_buffer_size(library_size: int) -> int:
 def recent_artists(
     tracks: list[Track], recent_plays: list[str], window: int = ARTIST_WINDOW
 ) -> set[str]:
-    """ " return the artist that appeared in the recent artist winfow"""
+    """return the artist that appeared in the recent artist window"""
 
     track_lookup = {track.video_id: track for track in tracks}
     artists: set[str] = set()
@@ -91,7 +91,8 @@ def pick_next_track() -> Track | None:
     buffer_size = compute_buffer_size(len(tracks))
     recent_buffer = set(recent_plays[-buffer_size:]) if buffer_size else set()
     candidates = [track for track in tracks if track.video_id not in recent_buffer]
-    # if every single track falls into the recent buffer (should only happen with malformed history imo, happy to be proven wrong), fall back to the full library rather than deadlocking
+    # if every single track falls into the recent buffer,
+    # fall back to the full library rather than deadlocking
 
     if not candidates:
         candidates = tracks
