@@ -85,7 +85,7 @@ def test_pick_next_track_skips_recent(monkeypatch):
     selected = queue.pick_next_track()
     assert selected is not None
     assert selected.video_id == "b"
-    assert saved["history"] == ["b"]
+    assert saved["history"] == ["a", "b"]
 
 
 def test_pick_next_track_falls_back_when_everything_recent(monkeypatch):
@@ -110,3 +110,22 @@ def test_save_recent_plays(tmp_path, monkeypatch):
     monkeypatch.setattr(queue, "RECENT_PLAYS_PATH", path)
     queue.save_recent_plays(["a", "b"])
     assert json.loads(path.read_text()) == ["a", "b"]
+
+
+def test_pick_next_track_keeps_artist_history(monkeypatch):
+    tracks = [make_track(str(i), f"Artist{i}") for i in range(6)]
+    monkeypatch.setattr(queue, "load_tracks", lambda: tracks)
+    monkeypatch.setattr(
+        queue,
+        "load_recent_plays",
+        lambda: ["0", "1", "2", "3", "4"],
+    )
+    saved = {}
+    monkeypatch.setattr(
+        queue, "save_recent_plays", lambda history: saved.setdefault("history", history)
+    )
+    monkeypatch.setattr(
+        queue, "_weighted_choice", lambda candidates, weights: candidates[0]
+    )
+    queue.pick_next_track()
+    assert len(saved["history"]) == queue.ARTIST_WINDOW

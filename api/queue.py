@@ -105,8 +105,9 @@ def pick_next_track() -> Track | None:
     selected = _weighted_choice(candidates, weights)
     recent_plays.append(selected.video_id)
 
-    if buffer_size:
-        recent_plays = recent_plays[-buffer_size:]
+    history_size = max(buffer_size, ARTIST_WINDOW)
+    if history_size:
+        recent_plays = recent_plays[-history_size:]
 
     save_recent_plays(recent_plays)
     return selected
